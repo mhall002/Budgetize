@@ -1,0 +1,36 @@
+﻿@using BudgetSplit.New.Services.Imports
+<MudSelect @bind-Value="Value">
+    @foreach (var item in ImportDefinitions)
+    {
+        <MudSelectItem Value="item">@item.Name</MudSelectItem>
+    }
+</MudSelect>
+
+@code {
+    private ImportDefinition? _value;
+    [Parameter]
+    public ImportDefinition? Value { get => _value;
+        set
+        {
+            if (_value == null && value == null)
+                return;
+
+            if (_value == value)
+                return;
+
+            _value = value;
+
+            ValueChanged.InvokeAsync(value);
+        }
+    }
+
+    protected List<ImportDefinition> ImportDefinitions { get; set; }
+
+    [Parameter]
+    public EventCallback<ImportDefinition?> ValueChanged { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        ImportDefinitions = ImportTypes.All;
+    }
+}

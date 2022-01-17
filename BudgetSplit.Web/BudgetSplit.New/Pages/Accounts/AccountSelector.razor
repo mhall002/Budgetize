@@ -1,0 +1,58 @@
+﻿@using BudgetSplit.Core.Models
+@using BudgetSplit.New.Pages.Common
+@using Microsoft.EntityFrameworkCore
+@inherits SelectorComponent<Account>
+
+
+<AutoCompleteNew @ref="_autoComplete" T="Account" @bind-Value="Value" SearchFunc="@Search1" Dense="true"
+ToStringFunc=@(e => e == null ? "" : $"{e.Name} - {e.Description}")>
+    <ItemTemplate Context="e">
+        <MudText>
+            @e.Name - @e.Description
+        </MudText>
+    </ItemTemplate>
+    <ItemSelectedTemplate Context="e">
+        <MudText>
+            @e.Name - @e.Description
+        </MudText>
+    </ItemSelectedTemplate>
+    <PopoutFooter>
+        <MudButton OnClick="OpenDialog" Variant="Variant.Text" Color="Color.Primary">
+            New Account
+        </MudButton>
+    </PopoutFooter>
+</AutoCompleteNew>
+
+@if (AllowCreate)
+{
+    <MudDialog @bind-IsVisible="CreateDialogVisible">
+        <TitleContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-3"/> Create Account
+            </MudText>
+        </TitleContent>
+        <DialogContent>
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="6">
+                    <MudTextField @bind-Value="@EditingItem.Name" Label="Account"/>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="6">
+                    <MudTextField @bind-Value="@EditingItem.Description" Label="Description"/>
+                </MudItem>
+            </MudGrid>
+        </DialogContent>
+        <DialogActions>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateItem" Class="px-10">Add</MudButton>
+            <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="CancelCreate" Class="px-10">Cancel</MudButton>
+        </DialogActions>
+    </MudDialog>
+}
+
+@code {
+    protected override DbSet<Account> DbSet => Context.Accounts;
+
+    protected override IQueryable<Account> SearchFilter(IQueryable<Account> query, string filterText)
+    {
+        return query.Where(a => a.Name.Contains(filterText) || a.Description.Contains(filterText));
+    }
+}

@@ -1,0 +1,3 @@
+﻿namespace BudgetSplit.Web.Data
+{
+}

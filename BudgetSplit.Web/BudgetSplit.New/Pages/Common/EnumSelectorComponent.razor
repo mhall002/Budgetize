@@ -1,0 +1,9 @@
+﻿@typeparam T where T : struct, Enum
+@attribute [CascadingTypeParameter(nameof(T))]
+
+<MudSelect @bind-Value="Value">
+    @foreach (var item in Items)
+    {
+        <MudSelectItem Value="item.Value">@item.Name</MudSelectItem>
+    }
+</MudSelect>

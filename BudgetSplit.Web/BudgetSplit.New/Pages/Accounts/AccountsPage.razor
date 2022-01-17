@@ -1,0 +1,100 @@
+﻿@page "/Accounts"
+@using BudgetSplit.Core.Models
+@using BudgetSplit.New.Data
+@using BudgetSplit.New.Pages.Common
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext _context
+
+<h3>Accounts</h3>
+
+
+
+<MudTable Items="@Items" Hover="true" CustomHeader="true"
+Breakpoint="Breakpoint.Sm" LoadingProgressColor="Color.Info"
+RowEditCommit="ItemHasBeenCommitted" OnPreviewEditClick="OnEditStart" RowEditCancel="OnEditCancel">
+    <HeaderContent>
+        <MudTHeadRow>
+            <MudTh>Name</MudTh>
+            <MudTh>Owner</MudTh>
+            <MudTh>Description</MudTh>
+            <MudTh>Registered</MudTh>
+            <MudTh>Account Type</MudTh>
+            <MudTh>Import Type</MudTh>
+        </MudTHeadRow>
+        <MudTHeadRow>
+            <MudTh DataLabel="Name"><MudTextField @bind-Value="NewItem.Name" Variant="Variant.Text"></MudTextField></MudTh>
+            <MudTh DataLabel="Owner"><HumanSelector ShowNewOption="false" @bind-Value="NewItem.Owner"></HumanSelector></MudTh>
+            <MudTh DataLabel="Description"><MudTextField @bind-Value="NewItem.Description"/></MudTh>
+            <MudTh DataLabel="Registered"><EnumSelectorComponent T="RegisteredType" @bind-Value="NewItem.RegisteredType"/></MudTh>
+            <MudTh DataLabel="Account Type"><EnumSelectorComponent T="AccountType" @bind-Value="NewItem.AccountType"/></MudTh>
+            <MudTh DataLabel="Import Type"><ImportTypeSelector @bind-Value="NewItem.ImportDefinition"/></MudTh>
+            <MudTh><MudIconButton OnClick="Insert" Icon="@Icons.Material.Filled.Check" aria-label="delete"></MudIconButton></MudTh>
+        </MudTHeadRow>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Name">@context.Name</MudTd>
+        <MudTd DataLabel="Owner">@context.Owner?.Name</MudTd>
+        <MudTd DataLabel="Description">@context.Description</MudTd>
+        <MudTd DataLabel="Registered">@context.RegisteredType.GetName()</MudTd>
+        <MudTd DataLabel="Account Type">@context.AccountType.GetName()</MudTd>
+        <MudTd DataLabel="Import Type">@context.ImportDefinition?.Name</MudTd>
+        <MudTd ><MudIconButton OnClick="async () => Delete(context)" Icon="@Icons.Material.Filled.Delete" aria-label="delete"></MudIconButton></MudTd>
+    </RowTemplate>
+    <RowEditingTemplate>
+        <MudTd DataLabel="Name"><MudTextField @bind-Value="context.Name" Variant="Variant.Text"></MudTextField></MudTd>
+        <MudTd DataLabel="Owner"><HumanSelector ShowNewOption="false" @bind-Value="EditingItem.Owner"></HumanSelector></MudTd>
+        <MudTd DataLabel="Description"><MudTextField @bind-Value="context.Description" Variant="Variant.Text"></MudTextField></MudTd>
+        <MudTd DataLabel="Registered"><EnumSelectorComponent T="RegisteredType" @bind-Value="EditingItem.RegisteredType"/></MudTd>
+        <MudTd DataLabel="Account Type"><EnumSelectorComponent T="AccountType" @bind-Value="EditingItem.AccountType"/></MudTd>
+        <MudTd DataLabel="Import Type"><ImportTypeSelector @bind-Value="EditingItem.ImportDefinition"/></MudTd>
+    </RowEditingTemplate>
+</MudTable>
+
+@code {
+    protected Account NewItem { get; set; } = new Account();
+
+    protected Account EditingItem { get; set; } = new Account();
+
+    protected List<Account> Items { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Items = await _context.Accounts.Include(a => a.Owner).ToListAsync();
+    }
+
+    protected async Task Insert()
+    {
+        _context.Add(NewItem);
+        await _context.SaveChangesAsync();
+        Items.Add(NewItem);
+        NewItem = new Account();
+    }
+
+    protected async void ItemHasBeenCommitted(object element)
+    {
+        _context.Accounts.Update(EditingItem);
+        await _context.SaveChangesAsync();
+    }
+
+    protected async void OnEditStart(object element)
+    {
+        EditingItem = (Account)element;
+    }
+
+    protected async void Delete(Account element)
+    {
+        var transactions = _context.Transactions.Where(t => t.AccountId == element.Id);
+        _context.Transactions.RemoveRange(transactions);
+        _context.Accounts.Remove(element);
+        Items.Remove(element);
+        await _context.SaveChangesAsync();
+    }
+
+    protected async void OnEditCancel(object element)
+    {
+        await _context.Entry(element).ReloadAsync();
+        StateHasChanged();
+    }
+
+    
+}

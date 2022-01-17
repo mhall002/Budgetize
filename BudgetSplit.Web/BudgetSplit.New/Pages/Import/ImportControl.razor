@@ -1,0 +1,83 @@
+﻿@using BudgetSplit.Core.Models
+@using BudgetSplit.New.Services
+@using BudgetSplit.New.Services.Imports
+@inject ImportService _importService;
+
+<InputFile id="fileInput" OnChange="UploadFiles" hidden multiple />
+
+<MudButton HtmlTag="label"
+           Variant="Variant.Filled"
+           Color="Color.Primary"
+           StartIcon="@Icons.Filled.CloudUpload"
+           for="fileInput">
+    Import
+</MudButton>
+
+<MudDialog @bind-IsVisible="_createDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-3"/> Which Account
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" sm="12" md="12">
+                <AccountSelector @bind-Value="@Account" AllowCreate="false"/>
+            </MudItem>
+            <MudItem xs="12" sm="12" md="12">
+                <ImportTypeSelector @bind-Value="@ImportDefinition"/>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateItem" Class="px-10">Import</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="CancelCreate" Class="px-10">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+@code {
+    [Parameter]
+    public Account Account { get; set; }
+
+    [Parameter]
+    public bool AccountEditable { get; set; } = false;
+
+    [Parameter]
+    public ImportDefinition? ImportDefinition { get; set; }
+
+    [Parameter]
+    public bool ImportTypeEditable { get; set; }
+
+    [Parameter]
+    public Func<List<Transaction>, Task> ImportCompleted { get; set; } 
+
+    private bool _createDialogVisible;
+    private List<IBrowserFile> Files { get; set; }
+    private async Task UploadFiles(InputFileChangeEventArgs e)
+    {
+
+        Files = e.GetMultipleFiles().ToList();
+        _createDialogVisible = true;
+        //TODO upload the files to the server
+    }
+
+    private async Task CreateItem()
+    {
+        //await Import?.Invoke(e.File);
+        var allData = new List<Transaction>();
+        foreach (var file in Files)
+        {
+            var data = await _importService.Import(file.OpenReadStream(), Account, ImportDefinition);
+            allData.AddRange(data);
+        }
+        
+        _createDialogVisible = false;
+        await ImportCompleted(allData);
+    }
+
+    private async Task CancelCreate()
+    {
+        _createDialogVisible = false;
+    }
+}

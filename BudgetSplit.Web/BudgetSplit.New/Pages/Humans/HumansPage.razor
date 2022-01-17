@@ -1,0 +1,73 @@
+﻿@page "/Humans"
+@using BudgetSplit.Core.Models
+@using BudgetSplit.New.Data
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext _context
+
+<h3>Humans</h3>
+
+<MudTable Items="@Items" Hover="true" CustomHeader="true"
+Breakpoint="Breakpoint.Sm" LoadingProgressColor="Color.Info"
+RowEditCommit="ItemHasBeenCommitted" OnPreviewEditClick="OnEditStart" RowEditCancel="OnEditCancel">
+    <HeaderContent>
+        <MudTHeadRow>
+            <MudTh>Name</MudTh>
+        </MudTHeadRow>
+        <MudTHeadRow>
+            <MudTh DataLabel="Name"><MudTextField @bind-Value="NewItem.Name" Variant="Variant.Text"></MudTextField></MudTh>
+            <MudTh><MudIconButton OnClick="Insert" Icon="@Icons.Material.Filled.Check" aria-label="delete"></MudIconButton></MudTh>
+        </MudTHeadRow>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Name">@context.Name</MudTd>
+        <MudTd ><MudIconButton OnClick="async () => Delete(context)" Icon="@Icons.Material.Filled.Delete" aria-label="delete"></MudIconButton></MudTd>
+    </RowTemplate>
+    <RowEditingTemplate>
+        <MudTd DataLabel="Name"><MudTextField @bind-Value="context.Name" Variant="Variant.Text"></MudTextField></MudTd>
+    </RowEditingTemplate>
+</MudTable>
+
+@code {
+    protected Human NewItem { get; set; } = new Human();
+
+    protected Human EditingItem { get; set; } = new Human();
+
+    protected List<Human> Items { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Items = await _context.Humans.ToListAsync();
+    }
+
+    protected async Task Insert()
+    {
+        _context.Add(NewItem);
+        await _context.SaveChangesAsync();
+        Items.Add(NewItem);
+        NewItem = new Human();
+    }
+
+    protected async void ItemHasBeenCommitted(object element)
+    {
+        _context.Humans.Update(EditingItem);
+        await _context.SaveChangesAsync();
+    }
+
+    protected async void OnEditStart(object element)
+    {
+        EditingItem = new Human();
+    }
+
+    protected async void Delete(Human element)
+    {
+        _context.Humans.Remove(element);
+        Items.Remove(element);
+        await _context.SaveChangesAsync();
+    }
+
+    protected async void OnEditCancel(object element)
+    {
+        await _context.Entry(element).ReloadAsync();
+        StateHasChanged();
+    }
+}

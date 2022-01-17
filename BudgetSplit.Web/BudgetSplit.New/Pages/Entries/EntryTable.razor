@@ -1,0 +1,253 @@
+﻿@using BudgetSplit.Core.Models
+@using BudgetSplit.New.Data
+@using BudgetSplit.New.Utilities
+@using Microsoft.EntityFrameworkCore
+@using BudgetSplit.New.Pages.Payees;
+@using BudgetSplit.New.Pages.Categories;
+@using System.Runtime.CompilerServices
+@inherits OwningComponentBase<ApplicationDbContext>
+@inject ISnackbar _snackbar;
+
+<MudTable @ref="Table" Items="Elements" Hover="true" CustomHeader="true" Dense="true"
+Breakpoint="Breakpoint.Sm" Loading="@_loading" LoadingProgressColor="Color.Info"
+
+OnPreviewEditClick="OnEditStart" RowEditCancel="OnEditCancel"
+MultiSelection="true" @bind-SelectedItems="SelectedItems">
+@*RowEditCommit="ItemHasBeenCommitted" *@
+    <ToolBarContent>
+@*        <MudText Typo="Typo.h6">Entries</MudText>*@
+
+        <MudIconButton Icon="@Icons.Material.Filled.SelectAll" OnClick="SelectAll"></MudIconButton>
+        <MudIconButton Icon="@Icons.Material.Filled.ClearAll" OnClick="DeselectAll"></MudIconButton>
+        <MudMenu Label="Tools">
+            <MudMenuItem OnClick="SelectAll">Select All</MudMenuItem>
+            <MudMenuItem OnClick="DeselectAll">Deselect All</MudMenuItem>
+        </MudMenu>
+        
+        @if (SelectedItems.Any())
+        {
+            <MudDivider Vertical="true" FlexItem="true" />
+            <MudText>@SelectedItems.Count() entries selected</MudText>    
+            <MudIconButton ButtonType="ButtonType.Button" OnClick="Delete" Icon="@Icons.Material.Filled.Delete" Color="Color.Error" />
+            
+        }
+        <MudDivider Vertical="true" FlexItem="true"/>
+        <MudSpacer />
+        <MudTextField @bind-Value="SearchString" Placeholder="Search" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search" IconSize="Size.Medium" Class="mt-0"></MudTextField>
+    </ToolBarContent>
+    <HeaderContent>
+        <MudTHeadRow>
+            @if (ShowAccount)
+            {
+                <MudTh>
+                    Account</MudTh>
+            }
+            <MudTh>Date</MudTh>
+@*            <MudTh>Payer</MudTh>*@
+            <MudTh>Name</MudTh>
+            <MudTh>Payee</MudTh>
+            <MudTh>Category</MudTh>
+            <MudTh>Memo</MudTh>
+            <MudTh>Amount</MudTh>
+        </MudTHeadRow>
+        <MudTHeadRow>
+            @if (ShowAccount)
+            {
+                <MudTh DataLabel="Account"><AccountSelector @bind-Value="_newEntry.Transaction.Account" /></MudTh>
+            }
+            <MudTh DataLabel="Date"><MudDatePicker @bind-Date="_newEntry.BindableDate"/></MudTh>
+@*            <MudTh DataLabel="Payer">
+                <BudgetSplit.New.Pages.Humans.HumanSelector @bind-Value="_newEntry.Transaction.Human"/>
+            </MudTh>*@
+            <MudTh DataLabel="Name"><MudTextField @bind-Value="_newEntry.Transaction.Name" Variant="Variant.Text"></MudTextField></MudTh>
+            <MudTh DataLabel="Payee">
+                <PayeeSelector @bind-Value="_newEntry.Payee"/>
+            </MudTh>
+            <MudTh DataLabel="Category">
+                <CategorySelector @bind-Value="_newEntry.Transaction.Category"/>
+            </MudTh>
+            <MudTh DataLabel="Memo"><MudTextField @bind-Value="_newEntry.Transaction.Memo" Variant="Variant.Text"></MudTextField></MudTh>
+            <MudTh DataLabel="Amount"><MudNumericField @bind-Value="_newEntry.Transaction.Amount" Variant="Variant.Text" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.AttachMoney" HideSpinButtons="true" /></MudTh>
+            <MudTh><MudIconButton OnClick="Insert" Icon="@Icons.Material.Filled.Create" aria-label="delete"></MudIconButton></MudTh>
+        </MudTHeadRow>
+    </HeaderContent>
+    <RowTemplate>
+        @if (ShowAccount)
+         {
+            <MudTd DataLabel="Account">@context.Account?.Name</MudTd>
+        }
+        <MudTd DataLabel="Date">@context.TransactionDate.ToString("MMM dd, yyyy")</MudTd>
+        @*<MudTd DataLabel="Payer">@(context.Human?.Name ?? "")</MudTd>*@
+        <MudTd DataLabel="Name">@context.Name</MudTd>
+        <MudTd DataLabel="Payee">@(context.Payee?.Name ?? "")</MudTd>
+        <MudTd DataLabel="Category">@(context.Category?.Name ?? "")</MudTd>
+        <MudTd DataLabel="Memo">@context.Memo</MudTd>
+        
+        
+        <MudTd DataLabel="Amount">@context.Amount</MudTd>
+    </RowTemplate>
+    <RowEditingTemplate>
+        @if (ShowAccount)
+            {
+        <MudTd DataLabel="Account"><AccountSelector @bind-Value="_editingEntry.Transaction.Account" /></MudTd>
+            }
+        <MudTd DataLabel="Date"><MudDatePicker @bind-Date="_editingEntry.BindableDate"/></MudTd>
+@*        <MudTd DataLabel="Payer">
+            <BudgetSplit.New.Pages.Humans.HumanSelector @bind-Value="_newEntry.Transaction.Human"/>
+        </MudTd>*@
+        <MudTd DataLabel="Name"><MudTextField @bind-Value="context.Name" Variant="Variant.Text"></MudTextField></MudTd>
+        <MudTd DataLabel="Payee">
+            <PayeeSelector @bind-Value="_editingEntry.Payee"/>
+        </MudTd>
+        <MudTd DataLabel="Category">
+            <CategorySelector @bind-Value="_editingEntry.Transaction.Category"/>
+        </MudTd>
+        
+        <MudTd DataLabel="Memo"><MudTextField @bind-Value="_editingEntry.Transaction.Memo" Variant="Variant.Text"></MudTextField></MudTd>
+        <MudTd DataLabel="Amount"><MudNumericField @bind-Value="_editingEntry.Transaction.Amount" Variant="Variant.Text" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.AttachMoney" HideSpinButtons="true" /></MudTd>
+    </RowEditingTemplate>
+</MudTable>
+
+@code {
+    class TransactionVM
+    {
+        public Transaction Transaction { get; set; }
+        public string PayeeName { get; set; }
+        public DateTime? BindableDate { get => Transaction.TransactionDate; set => Transaction.TransactionDate = value ?? DateTime.Now; }
+        public Payee? Payee { get => Transaction.Payee; set => Transaction.Payee = value; }
+
+        public TransactionVM(Transaction transaction)
+        {
+            Transaction = transaction;
+        }
+    }
+
+    private MudTable<Transaction> Table { get; set; }
+    private List<Transaction> Elements = new List<Transaction>();
+    private bool _loading = true;
+    private ApplicationDbContext _context => Service;
+    TransactionVM? _editingEntry = null;
+    TransactionVM _newEntry = new TransactionVM(new Transaction());
+
+    [Parameter]
+    public bool ShowAccount { get; set; } = true;
+
+    [Parameter]
+    public Func<IQueryable<Transaction>, IQueryable<Transaction>>? Filter { get; set; }
+
+    private HashSet<Transaction> SelectedItems = new HashSet<Transaction>();
+
+    private Task Startup = null;
+
+    public string SearchString { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+    }    protected override async Task OnParametersSetAsync()
+    {
+        //await base.OnParametersSetAsync();
+        await Refresh();
+    }
+
+    private AsyncLock _refreshLock = new AsyncLock();
+    //[MethodImpl(MethodImplOptions.Synchronized)]
+    public async Task Refresh()
+    {
+        using (await _refreshLock.Lock())
+        {
+            _loading = true;
+
+            IQueryable<Transaction> query = _context.Transactions
+            .Include(t => t.Account)
+            .Include(t => t.Payee)
+            .Include(t => t.Category);
+
+            if (Filter != null)
+            {
+                query = Filter(query);
+            }
+
+            query = query.OrderByDescending(t => t.TransactionDate);
+            Elements = await query.ToListAsync();
+
+            _loading = false;
+        }
+        StateHasChanged();
+    }
+
+    protected async Task Insert()
+    {
+        _context.Add(_newEntry.Transaction);
+        await _context.SaveChangesAsync();
+        Elements.Insert(0, _newEntry.Transaction);
+        _newEntry = new TransactionVM(new Transaction());
+        StateHasChanged();
+    }
+
+    protected async void ItemHasBeenCommitted(object element)
+    {
+        await Update((Transaction)element);
+        StateHasChanged();
+    }
+
+    protected async void OnEditStart(object element)
+    {
+        _editingEntry = new TransactionVM((Transaction)element);
+    }
+
+    protected async Task Update(Transaction transaction)
+    {
+        transaction.AccountId = transaction.Account?.Id;
+        transaction.Account = null;
+
+        transaction.PayeeId = transaction.Payee?.Id;
+        transaction.Payee = null;
+
+        transaction.CategoryId = transaction.Category?.Id;
+        transaction.Category = null;
+
+        _context.Transactions.Update(transaction);
+        await _context.SaveChangesAsync();
+    }
+
+    protected async void OnEditCancel(object element)
+    {
+        await Update((Transaction)element);
+        StateHasChanged();
+    }
+
+    protected async Task Delete()
+    {
+        Table.SetEditingItem(null);
+        _context.Transactions.RemoveRange(SelectedItems);
+        await _context.SaveChangesAsync();
+        _snackbar.Add($"Deleted {SelectedItems.Count} entries", Severity.Error);
+        Elements.RemoveAll(t => SelectedItems.Contains(t));
+        var oldElements = Elements;
+        Elements = new List<Transaction>();
+        StateHasChanged();
+        Elements = oldElements;
+        SelectedItems.Clear();
+        StateHasChanged();
+        await Refresh();
+    }
+
+    protected async Task SelectAll()
+    {
+        Table.SelectedItems.Clear();
+        foreach (var item in Elements)
+        {
+            Table.SelectedItems.Add(item);
+        }
+    }
+
+    protected async Task DeselectAll()
+    {
+        Table.SelectedItems.Clear();
+    }
+
+    public void Dispose()
+    {
+        _context?.Dispose();
+    }
+}

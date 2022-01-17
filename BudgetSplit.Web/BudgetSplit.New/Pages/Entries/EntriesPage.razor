@@ -1,0 +1,17 @@
+﻿@page "/entries"
+@using BudgetSplit.Core.Models
+@using BudgetSplit.New.Data
+@using Microsoft.EntityFrameworkCore
+@using BudgetSplit.New.Pages.Payees;
+@using BudgetSplit.New.Pages.Categories;
+@inject ApplicationDbContext _context
+
+<h3>All Entries</h3>
+
+<BudgetSplit.New.Pages.Import.ImportTangerineControl/>
+
+<EntryTable />
+
+@code {
+    
+}

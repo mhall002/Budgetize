@@ -1,0 +1,100 @@
+﻿@using BudgetSplit.Core.Models
+@using BudgetSplit.New.Data
+@using Microsoft.EntityFrameworkCore
+@using BudgetSplit.New.Pages.Components
+@inject ApplicationDbContext _context
+
+<AutoCompleteNew @ref="_autoComplete" T="Human" @bind-Value="Value" SearchFunc="@Search1" Dense="true"
+ToStringFunc=@(e => e == null ? "" : $"{e.Name}") Clearable="true">
+    <ItemTemplate Context="e">
+        <MudText>
+            @e.Name
+        </MudText>
+    </ItemTemplate>
+    <ItemSelectedTemplate Context="e">
+        <MudText>
+            @e.Name
+        </MudText>
+    </ItemSelectedTemplate>
+    <PopoutFooter>
+        <MudButton OnClick="OpenDialog" Variant="Variant.Text" Color="Color.Primary">
+            New Human
+        </MudButton>
+    </PopoutFooter>
+</AutoCompleteNew>
+
+@if (ShowNewOption)
+{
+<MudDialog @bind-IsVisible="_createDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-3"/> Create Human
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="6">
+                <MudTextField @bind-Value="@_editingItem.Name" Label="Human"/>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreateItem" Class="px-10">Add</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="CancelCreate" Class="px-10">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+}
+@code {
+    [Parameter]
+    public bool ShowNewOption { get; set; } = true;
+
+    private AutoCompleteNew<Human>? _autoComplete;
+
+    private Human _editingItem = new Human();
+
+    private bool _createDialogVisible;
+
+    private Human? _value;
+    [Parameter]
+    public Human? Value { get => _value; set
+        {
+            if (_value == value)
+                return;
+            _value = value;
+            ValueChanged.InvokeAsync(value);
+        }
+    }
+
+    [Parameter]
+    public EventCallback<Human?> ValueChanged { get; set; }
+
+    private void OpenDialog()
+    {
+        _editingItem = new Human();
+        _createDialogVisible = true;
+    }
+
+    private async Task<IEnumerable<Human>> Search1(string value)
+    {
+        // if text is null or empty, show complete list
+        if (string.IsNullOrEmpty(value))
+            return await _context.Humans.ToListAsync();
+        return await _context.Humans.Where(x => x.Name.Contains(value)).ToListAsync();
+    }
+
+    private async Task CreateItem()
+    {
+        _context.Humans.Add(_editingItem);
+        await _context.SaveChangesAsync();
+        Value = _editingItem;
+        _editingItem = new Human();
+        _createDialogVisible = false;
+        await _autoComplete.SelectOption(Value);
+        StateHasChanged();
+    }
+
+    private void CancelCreate()
+    {
+        _createDialogVisible = false;
+    }
+}

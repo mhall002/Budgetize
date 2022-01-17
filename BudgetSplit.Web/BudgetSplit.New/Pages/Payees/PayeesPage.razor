@@ -1,0 +1,78 @@
+﻿@page "/Payees"
+@using BudgetSplit.Core.Models
+@using BudgetSplit.New.Data
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext _context
+
+<h3>Payees</h3>
+
+<MudTable Items="@Payees" Hover="true" CustomHeader="true"
+Breakpoint="Breakpoint.Sm" LoadingProgressColor="Color.Info"
+RowEditCommit="ItemHasBeenCommitted" OnPreviewEditClick="OnEditStart" RowEditCancel="OnEditCancel">
+    <HeaderContent>
+        <MudTHeadRow>
+            <MudTh>Name</MudTh>
+            <MudTh>Description</MudTh>
+        </MudTHeadRow>
+        <MudTHeadRow>
+            <MudTh DataLabel="Name"><MudTextField @bind-Value="NewPayee.Name" Variant="Variant.Text"></MudTextField></MudTh>
+            <MudTh DataLabel="Description"><MudTextField @bind-Value="NewPayee.Description"/></MudTh>
+            <MudTh><MudIconButton OnClick="Insert" Icon="@Icons.Material.Filled.Check" aria-label="delete"></MudIconButton></MudTh>
+        </MudTHeadRow>
+    </HeaderContent>
+    <RowTemplate>
+        <MudTd DataLabel="Name">@context.Name</MudTd>
+        <MudTd DataLabel="Description">@context.Description</MudTd>
+        <MudTd ><MudIconButton OnClick="async () => Delete(context)" Icon="@Icons.Material.Filled.Delete" aria-label="delete"></MudIconButton></MudTd>
+    </RowTemplate>
+    <RowEditingTemplate>
+        <MudTd DataLabel="Name"><MudTextField @bind-Value="context.Name" Variant="Variant.Text"></MudTextField></MudTd>
+        <MudTd DataLabel="Description"><MudTextField @bind-Value="context.Description" Variant="Variant.Text"></MudTextField></MudTd>
+        
+    </RowEditingTemplate>
+</MudTable>
+
+@code {
+    protected Payee NewPayee { get; set; } = new Payee();
+
+    protected Payee EditingPayee { get; set; } = new Payee();
+
+    protected List<Payee> Payees { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Payees = await _context.Payees.ToListAsync();
+    }
+
+    protected async Task Insert()
+    {
+        _context.Add(NewPayee);
+        await _context.SaveChangesAsync();
+        Payees.Add(NewPayee);
+        NewPayee = new Payee();
+    }
+
+    protected async void ItemHasBeenCommitted(object element)
+    {
+        _context.Payees.Update(EditingPayee);
+        await _context.SaveChangesAsync();
+    }
+
+    protected async void OnEditStart(object element)
+    {
+        EditingPayee = new Payee();
+    }
+
+    protected async void Delete(Payee element)
+    {
+        _context.Payees.Remove(element);
+        Payees.Remove(element);
+        await _context.SaveChangesAsync();
+    }
+
+    protected async void OnEditCancel(object element)
+    {
+        await _context.Entry(element).ReloadAsync();
+        StateHasChanged();
+    }
+}

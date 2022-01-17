@@ -1,0 +1,45 @@
+﻿@page "/Account/{Id:int}"
+@using BudgetSplit.New.Data
+@using Microsoft.EntityFrameworkCore
+@inject ApplicationDbContext _context;
+
+@if (Account != null)
+{
+    <h3>Entries for @(Account.Name)</h3>
+
+
+<ImportControl ImportCompleted="Import" Account="Account" ImportDefinition="Account.ImportDefinition"/>
+}
+<EntryTable @ref="Table" Filter="@(q => q.Where(t => t.AccountId == Id))" ShowAccount="false" />
+
+@code {
+    [Parameter]
+    public int Id { get; set; }
+
+    EntryTable Table { get; set; }
+
+    public Account Account { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+    }
+
+    private bool Loaded = false;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        //await base.OnParametersSetAsync();
+        Account = await _context.Accounts.FirstOrDefaultAsync(a => a.Id == Id);
+        if (Account == null)
+            throw new ArgumentException($"No account with id {Id}");
+        //StateHasChanged();
+        if (Loaded)
+            Table.Refresh();
+        Loaded = true;
+    }
+
+    protected async Task Import(List<Transaction> transactions)
+    {
+        await Table.Refresh();
+    }
+}

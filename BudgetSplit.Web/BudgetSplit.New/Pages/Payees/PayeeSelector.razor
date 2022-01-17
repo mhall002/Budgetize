@@ -1,0 +1,98 @@
+﻿@using BudgetSplit.Core.Models
+@using BudgetSplit.New.Data
+@using Microsoft.EntityFrameworkCore
+@using BudgetSplit.New.Pages.Components
+@inject ApplicationDbContext _context
+
+<AutoCompleteNew @ref="_autoComplete" T="Payee" @bind-Value="Value" SearchFunc="@Search1" Dense="true"
+ToStringFunc=@(e => e == null ? "" : $"{e.Name} - {e.Description}")>
+    <ItemTemplate Context="e">
+        <MudText>
+            @e.Name - @e.Description
+        </MudText>
+    </ItemTemplate>
+    <ItemSelectedTemplate Context="e">
+        <MudText>
+            @e.Name - @e.Description
+        </MudText>
+    </ItemSelectedTemplate>
+    <PopoutFooter>
+        <MudButton OnClick="OpenDialog" Variant="Variant.Text" Color="Color.Primary">
+            New Payee
+        </MudButton>
+    </PopoutFooter>
+</AutoCompleteNew>
+
+<MudDialog @bind-IsVisible="_createDialogVisible">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Edit" Class="mr-3"/> Create Payee
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="6">
+                <MudTextField @bind-Value="@_editingPayee.Name" Label="Payee"/>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="6">
+                <MudTextField @bind-Value="@_editingPayee.Description" Label="Description"/>
+            </MudItem>
+        </MudGrid>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="CreatePayee" Class="px-10">Add</MudButton>
+        <MudButton Variant="Variant.Filled" Color="Color.Error" OnClick="CancelCreate" Class="px-10">Cancel</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    private AutoCompleteNew<Payee>? _autoComplete;
+
+    private Payee _editingPayee = new Payee();
+
+    private bool _createDialogVisible;
+
+    private Payee? _value;
+    [Parameter]
+    public Payee? Value { get => _value; set
+        {
+            if (_value == value)
+                return;
+            _value = value;
+            ValueChanged.InvokeAsync(value);
+        }
+    }
+
+    [Parameter]
+    public EventCallback<Payee?> ValueChanged { get; set; }
+
+    private void OpenDialog()
+    {
+        _editingPayee = new Payee();
+        _createDialogVisible = true;
+    }
+
+    private async Task<IEnumerable<Payee>> Search1(string value)
+    {
+        // if text is null or empty, show complete list
+        if (string.IsNullOrEmpty(value))
+            return await _context.Payees.ToListAsync();
+        return await _context.Payees.Where(x => x.Name.Contains(value)).ToListAsync();
+    }
+
+    private async Task CreatePayee()
+    {
+        _context.Payees.Add(_editingPayee);
+        await _context.SaveChangesAsync();
+        Value = _editingPayee;
+        _editingPayee = new Payee();
+        _createDialogVisible = false;
+        await _autoComplete.SelectOption(Value);
+        StateHasChanged();
+    }
+
+    private void CancelCreate()
+    {
+        _createDialogVisible = false;
+    }
+}
