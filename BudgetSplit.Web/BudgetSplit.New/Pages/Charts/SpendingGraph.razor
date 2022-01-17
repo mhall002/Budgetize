@@ -1,35 +1,50 @@
 ﻿@using BudgetSplit.New.Data
+@using System.Globalization
 @inherits OwningComponentBase<ApplicationDbContext>
 
 <div>
-    <MudChart InputLabels="InputLabels" ChartType="ChartType.Bar" ChartSeries="@Series" @bind-SelectedIndex="Index" XAxisLabels="@XAxisLabels" Width="100%" Height="350px"></MudChart>
+    <RadzenChart >
+        @if (_periodData != null)
+        {
+            <RadzenColumnSeries Data="@_periodData" CategoryProperty="Name" Title="Income" LineType="LineType.Dashed" ValueProperty="Income" />
+            <RadzenColumnSeries Data="@_periodData" CategoryProperty="Name" Title="Expenses" ValueProperty="Expenses" />
+        }
+        <RadzenValueAxis Formatter="@FormatCurrency">
+            <RadzenGridLines Visible="true" />
+            <RadzenAxisTitle Text="Amount" />
+        </RadzenValueAxis>
+        <RadzenCOlumnOptions Radius="5" />
+    </RadzenChart>
 </div>
 <MudText Typo="Typo.h6">Selected portion of the chart: @Index</MudText>
 
 @code {
     private int Index = -1; //default value cannot be 0 -> first selectedindex is 0.
 
-    public List<ChartSeries> Series = new List<ChartSeries>()
-    {
-        new ChartSeries() { Name = "Spending", Data = new double[] { 40, 20, 25, 27, 46, 60, 48, 80, 15 } },
-        new ChartSeries() { Name = "Germany", Data = new double[] { 19, 24, 35, 13, 28, 15, 13, 16, 31 } },
-        new ChartSeries() { Name = "Sweden", Data = new double[] { 8, 6, 11, 13, 4, 16, 10, 16, 18 } },
-    };
-    public string[] XAxisLabels = { "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep" };
-    public string[] InputLabels;
-
     private ApplicationDbContext _context => Service;
+
+    List<PeriodResult> _periodData;
 
     protected override async Task OnParametersSetAsync()
     {
         await Refresh();
     }
 
+    string FormatCurrency(object value)
+    {
+        if (value is double dbl)
+        {
+            return dbl.ToString("C");
+        }
+        return "";
+    }
+
     public async Task Refresh()
     {
         var now = DateTime.Now;
         DateTime startDate = new DateTime(now.Year - 1, now.Month, 1);
-        var results = _context.Transactions.Where(t => t.Amount < 0 && t.TransactionDate > startDate).GroupBy(t =>
+        var results = _context.Transactions.Where(t => t.TransactionDate > startDate)
+        .GroupBy(t =>
         new {
             Month = t.TransactionDate.Month,
             Year = t.TransactionDate.Year,
@@ -39,35 +54,22 @@
         {
             g.Key.Year,
             g.Key.Month,
-            Total = g.Sum(t => t.Amount)
+            Total = g.Where(t => t.Amount < 0).Sum(t => t.Amount),
+            Income = g.Where(t => t.Amount > 0).Sum(t => t.Amount)
         });
 
-        ChartSeries series = new ChartSeries();
-        List<string> labels = new List<string>();
-
-        List<double> data = new List<double>();
-        List<string> inputLabels = new List<string>();
-
         ChartOptions options = new ChartOptions();
+
+        List<PeriodResult> periodData = new List<PeriodResult>();
 
 
         foreach (var periodResult in results)
         {
             var start = new DateTime(periodResult.Year, periodResult.Month, 1);
-            data.Add((double)periodResult.Total * -1);
-            labels.Add(start.ToString("MMM"));
-            inputLabels.Add((periodResult.Total * -1).ToString("C"));
+            periodData.Add(new PeriodResult(start, start.AddMonths(1) - TimeSpan.FromDays(1), periodResult.Total * -1, periodResult.Income, start.ToString("MMM")));
         }
 
-        Series.Clear();
-        Series.Add(new ChartSeries()
-            {
-                Name = "Spending",
-                Data = data.ToArray(),
-
-            });
-        XAxisLabels = labels.ToArray();
-        InputLabels = inputLabels.ToArray();
+        _periodData = periodData;
 
         StateHasChanged();
     }
@@ -76,15 +78,17 @@
     {
         public DateTime From { get; set; }
         public DateTime To { get; set; }
-        public decimal Amount { get; set; }
+        public decimal Expenses { get; set; }
+        public decimal Income { get; set; }
 
         public string Name { get; set; }
 
-        public PeriodResult(DateTime from, DateTime to, decimal amount, string name)
+        public PeriodResult(DateTime from, DateTime to, decimal expenses, decimal income, string name)
         {
             From = from;
             To = to;
-            Amount = amount;
+            Expenses = expenses;
+            Income = income;
             Name = name;
         }
     }

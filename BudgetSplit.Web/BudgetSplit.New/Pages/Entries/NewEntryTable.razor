@@ -1,0 +1,407 @@
+﻿@using BudgetSplit.Core.Models
+@using BudgetSplit.New.Data
+@using BudgetSplit.New.Utilities
+@using Microsoft.EntityFrameworkCore
+@using BudgetSplit.New.Pages.Payees;
+@using BudgetSplit.New.Pages.Categories;
+@using System.Runtime.CompilerServices
+@using Radzen
+@inherits OwningComponentBase<ApplicationDbContext>
+@inject ISnackbar _snackbar;
+
+
+<RadzenDataGrid @ref="ordersGrid" AllowFiltering="true" AllowPaging="true" PageSize="20" AllowSorting="true" EditMode="DataGridEditMode.Multiple"
+                Data="@Elements" TItem="Transaction" RowUpdate="@OnUpdateRow" RowCreate="@OnCreateRow"
+                SelectionMode="DataGridSelectionMode.Multiple" @bind-Value=SelectedTransactions>
+        <Columns>
+            <RadzenDataGridColumn TItem="Transaction" Width="40px" Sortable="false" Filterable="false">
+                <HeaderTemplate>
+                    <RadzenCheckBox TriState="false" TValue="bool" Value="@(Elements.Count == SelectedTransactions.Count)"
+                    Change="@(args => SelectedTransactions = (SelectedTransactions.Count == Elements.Count) ? new List<Transaction>() : new List<Transaction>(Elements))"                 
+                    />
+                </HeaderTemplate>
+                <Template Context="data">
+                    <RadzenCheckBox TriState="false" Value="@(SelectedTransactions != null && SelectedTransactions.Contains(data))" />
+                </Template>
+            </RadzenDataGridColumn>
+
+            @if (ShowAccount)
+        {
+            <RadzenDataGridColumn TItem="Transaction" Property="Account.Name" Title="Account" Width="120px" >
+                <EditTemplate Context="order">
+                    <AccountSelector @bind-Value="order.Account" />
+                </EditTemplate>
+            </RadzenDataGridColumn>
+        }
+
+            <RadzenDataGridColumn TItem="Transaction" Property="TransactionDate" Title="Date" Width="280px" >
+                <EditTemplate Context="order">
+                    <RadzenDatePicker @bind-Value="order.TransactionDate" Style="width:100%" />
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Transaction" Property="Name" Title="Name" Width="280px" >
+                <EditTemplate Context="order">
+                    <RadzenDatePicker @bind-Value="order.Name" Style="width:100%" />
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Transaction" Property="Payee.Name" Title="Payee" Width="280px" >
+                <EditTemplate Context="order">
+                    <PayeeSelector @bind-Value="order.Payee"/>
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Transaction" Property="Category.Name" Title="Category" Width="280px" >
+                <EditTemplate Context="order">
+                    <CategorySelector @bind-Value="order.Category"/>
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Transaction" Property="Memo" Title="Memo">
+                <EditTemplate Context="order">
+                    <RadzenTextBox @bind-Value="order.Memo" Style="width:100%; display: block" Name="ShipName" />
+                    <RadzenRequiredValidator Text="ShipName is required" Component="ShipName" Popup="true" />
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Transaction" Property="Amount" Title="Amount">
+                <EditTemplate Context="order">
+                    <RadzenNumeric @bind-Value="order.Amount" Style="width:100%; display: block" />
+                </EditTemplate>
+            </RadzenDataGridColumn>
+
+            <RadzenDataGridColumn TItem="Transaction" Context="sampleBlazorModelsSampleOrder" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="120px">
+                <Template Context="order">
+                    <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Class="m-1" Click="@(args => EditRow(order))" @onclick:stopPropagation="true">
+                    </RadzenButton>
+                </Template>
+                <EditTemplate Context="order">
+                    <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Primary" Class="m-1" Click="@((args) => SaveRow(order))">
+                    </RadzenButton>
+                    <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Class="m-1" Click="@((args) => CancelEdit(order))">
+                    </RadzenButton>
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Transaction" Context="order" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="60px">
+                <Template Context="order">
+                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="ButtonSize.Small" Class="m-1" Click="@(args => DeleteRow(order))"  @onclick:stopPropagation="true">
+                    </RadzenButton>
+                </Template>
+                <EditTemplate Context="order">
+                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="ButtonSize.Small" Class="m-1" Click="@(args => DeleteRow(order))">
+                    </RadzenButton>
+                </EditTemplate>
+            </RadzenDataGridColumn>
+        </Columns>
+</RadzenDataGrid>
+@*
+
+            <RadzenDataGridColumn TItem="Transaction" Property="Employee.LastName" Title="Employee" Width="220px">
+                <Template Context="order">
+                    <RadzenImage Path="@order.Employee?.Photo" style="width: 32px; height: 32px; border-radius: 16px; margin-right: 6px;" />
+                    @order.Employee?.FirstName @order.Employee?.LastName
+                </Template>
+                <EditTemplate Context="order">
+                    <RadzenDropDown @bind-Value="order.EmployeeID" Data="@employees" ValueProperty="EmployeeID" Style="width:100%; display: block;">
+                        <Template>
+                            <RadzenImage Path="@context.Photo" style="width: 20px; height: 20px; border-radius: 16px; margin-right: 6px;" />
+                            @context.FirstName @context.LastName
+                        </Template>
+                    </RadzenDropDown>
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Transaction" Property="OrderDate" Title="Order Date" Width="200px">
+                <Template Context="order">
+                    @String.Format("{0:d}", order.OrderDate)
+                </Template>
+                <EditTemplate Context="order">
+                    <RadzenDatePicker @bind-Value="order.OrderDate" Style="width:100%" />
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Transaction" Property="Freight" Title="Freight">
+                <Template Context="order">
+                    @String.Format(new System.Globalization.CultureInfo("en-US"), "{0:C}", order.Freight)
+                </Template>
+                <EditTemplate Context="order">
+                    <RadzenNumeric @bind-Value="order.Freight" Style="width:100%" />
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Transaction" Property="ShipName" Title="Ship Name">
+                <EditTemplate Context="order">
+                    <RadzenTextBox @bind-Value="order.ShipName" Style="width:100%; display: block" Name="ShipName" />
+                    <RadzenRequiredValidator Text="ShipName is required" Component="ShipName" Popup="true" />
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Transaction" Context="sampleBlazorModelsSampleOrder" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="120px">
+                <Template Context="order">
+                    <RadzenButton Icon="edit" ButtonStyle="ButtonStyle.Light" Class="m-1" Click="@(args => EditRow(order))" @onclick:stopPropagation="true">
+                    </RadzenButton>
+                </Template>
+                <EditTemplate Context="order">
+                    <RadzenButton Icon="check" ButtonStyle="ButtonStyle.Primary" Class="m-1" Click="@((args) => SaveRow(order))">
+                    </RadzenButton>
+                    <RadzenButton Icon="close" ButtonStyle="ButtonStyle.Light" Class="m-1" Click="@((args) => CancelEdit(order))">
+                    </RadzenButton>
+                </EditTemplate>
+            </RadzenDataGridColumn>
+            <RadzenDataGridColumn TItem="Transaction" Context="order" Filterable="false" Sortable="false" TextAlign="TextAlign.Center" Width="60px">
+                <Template Context="order">
+                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="ButtonSize.Small" Class="m-1" Click="@(args => DeleteRow(order))"  @onclick:stopPropagation="true">
+                    </RadzenButton>
+                </Template>
+                <EditTemplate Context="order">
+                    <RadzenButton ButtonStyle="ButtonStyle.Danger" Icon="delete" Size="ButtonSize.Small" Class="m-1" Click="@(args => DeleteRow(order))">
+                    </RadzenButton>
+                </EditTemplate>
+            </RadzenDataGridColumn>*@
+        
+
+
+@code {
+    class TransactionVM
+    {
+        public Transaction Transaction { get; set; }
+        public string PayeeName { get; set; }
+        public DateTime? BindableDate { get => Transaction.TransactionDate; set => Transaction.TransactionDate = value ?? DateTime.Now; }
+        public Payee? Payee { get => Transaction.Payee; set => Transaction.Payee = value; }
+
+        public TransactionVM(Transaction transaction)
+        {
+            Transaction = transaction;
+        }
+    }
+
+    IList<Transaction> SelectedTransactions { get; set; } = new List<Transaction>();
+
+    RadzenDataGrid<Transaction> ordersGrid;
+
+    private MudTable<Transaction> Table { get; set; }
+    private List<Transaction> Elements = new List<Transaction>();
+    private bool _loading = true;
+    private ApplicationDbContext _context => Service;
+    TransactionVM? _editingEntry = null;
+    TransactionVM _newEntry = new TransactionVM(new Transaction());
+
+    [Parameter]
+    public bool ShowAccount { get; set; } = true;
+
+    [Parameter]
+    public Func<IQueryable<Transaction>, IQueryable<Transaction>>? Filter { get; set; }
+
+    //private HashSet<Transaction> SelectedItems = new HashSet<Transaction>();
+
+    private Task Startup = null;
+
+    public string SearchString { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        //await base.OnParametersSetAsync();
+        await Refresh();
+    }
+
+    private AsyncLock _refreshLock = new AsyncLock();
+    //[MethodImpl(MethodImplOptions.Synchronized)]
+    public async Task Refresh()
+    {
+        using (await _refreshLock.Lock())
+        {
+            _loading = true;
+
+            IQueryable<Transaction> query = _context.Transactions
+            .Include(t => t.Account)
+            .Include(t => t.Payee)
+            .Include(t => t.Category);
+
+            if (Filter != null)
+            {
+                query = Filter(query);
+            }
+
+            query = query.OrderByDescending(t => t.TransactionDate);
+            Elements = await query.ToListAsync();
+
+            _loading = false;
+        }
+        StateHasChanged();
+    }
+
+    protected async Task Insert()
+    {
+        _context.Add(_newEntry.Transaction);
+        await _context.SaveChangesAsync();
+        Elements.Insert(0, _newEntry.Transaction);
+        _newEntry = new TransactionVM(new Transaction());
+        StateHasChanged();
+    }
+
+    protected async void ItemHasBeenCommitted(object element)
+    {
+        await Update((Transaction)element);
+        StateHasChanged();
+    }
+
+    protected async void OnEditStart(object element)
+    {
+        _editingEntry = new TransactionVM((Transaction)element);
+    }
+
+    protected async Task Update(Transaction transaction)
+    {
+        transaction.AccountId = transaction.Account?.Id;
+        transaction.Account = null;
+
+        transaction.PayeeId = transaction.Payee?.Id;
+        transaction.Payee = null;
+
+        transaction.CategoryId = transaction.Category?.Id;
+        transaction.Category = null;
+
+        _context.Transactions.Update(transaction);
+        await _context.SaveChangesAsync();
+    }
+
+    protected async void OnEditCancel(object element)
+    {
+        await Update((Transaction)element);
+        StateHasChanged();
+    }
+
+    protected async Task Delete()
+    {
+        Table.SetEditingItem(null);
+        _context.Transactions.RemoveRange(SelectedTransactions);
+        await _context.SaveChangesAsync();
+        _snackbar.Add($"Deleted {SelectedTransactions.Count} entries", Severity.Error);
+        Elements.RemoveAll(t => SelectedTransactions.Contains(t));
+        var oldElements = Elements;
+        Elements = new List<Transaction>();
+        StateHasChanged();
+        Elements = oldElements;
+        SelectedTransactions.Clear();
+        StateHasChanged();
+        await Refresh();
+    }
+
+    protected async Task SelectAll()
+    {
+        Table.SelectedItems.Clear();
+        foreach (var item in Elements)
+        {
+            Table.SelectedItems.Add(item);
+        }
+    }
+
+    protected async Task DeselectAll()
+    {
+        Table.SelectedItems.Clear();
+    }
+
+    public void Dispose()
+    {
+        _context?.Dispose();
+    }
+
+    async Task EditRow(Transaction order)
+    {
+        await ordersGrid.EditRow(order);
+    }
+
+    void OnUpdateRow(Transaction order)
+    {
+        if (order == orderToInsert)
+        {
+            orderToInsert = null;
+        }
+
+        _context.Update(order);
+
+        // For demo purposes only
+        //order.Customer = dbContext.Customers.Find(order.CustomerID);
+        //order.Employee = dbContext.Employees.Find(order.EmployeeID);
+
+        // For production
+        //dbContext.SaveChanges();
+    }
+
+    async Task SaveRow(Transaction order)
+    {
+        if (order == orderToInsert)
+        {
+            orderToInsert = null;
+        }
+
+        await ordersGrid.UpdateRow(order);
+    }
+
+    void CancelEdit(Transaction order)
+    {
+        if (order == orderToInsert)
+        {
+            orderToInsert = null;
+        }
+
+        ordersGrid.CancelEditRow(order);
+
+        order.AccountId = order.Account?.Id;
+        order.Account = null;
+        order.CategoryId = order.Category?.Id;
+        order.Category = null;
+        order.PayeeId = order.Payee?.Id;
+        order.Payee = null;
+
+        // For production
+        var orderEntry = _context.Entry(order);
+        if (orderEntry.State == EntityState.Modified)
+        {
+            orderEntry.CurrentValues.SetValues(orderEntry.OriginalValues);
+            orderEntry.State = EntityState.Unchanged;
+        }
+    }
+
+    async Task DeleteRow(Transaction order)
+    {
+        if (order == orderToInsert)
+        {
+            orderToInsert = null;
+        }
+
+        if (Elements.Contains(order))
+        {
+            _context.Remove(order);
+
+            // For demo purposes only
+            Elements.Remove(order);
+
+            // For production
+            //dbContext.SaveChanges();
+
+            await ordersGrid.Reload();
+        }
+        else
+        {
+            ordersGrid.CancelEditRow(order);
+        }
+    }
+
+    Transaction orderToInsert;
+
+    async Task InsertRow()
+    {
+        orderToInsert = new Transaction();
+        await ordersGrid.InsertRow(orderToInsert);
+    }
+
+    void OnCreateRow(Transaction order)
+    {
+        _context.Add(order);
+
+        // For demo purposes only
+        //order.Customer = dbContext.Customers.Find(order.CustomerID);
+        //order.Employee = dbContext.Employees.Find(order.EmployeeID);
+
+        // For production
+        //dbContext.SaveChanges();
+    }
+}

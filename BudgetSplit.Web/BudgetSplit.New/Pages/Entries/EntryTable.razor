@@ -143,7 +143,9 @@ MultiSelection="true" @bind-SelectedItems="SelectedItems">
 
     protected override async Task OnInitializedAsync()
     {
-    }    protected override async Task OnParametersSetAsync()
+    }
+
+    protected override async Task OnParametersSetAsync()
     {
         //await base.OnParametersSetAsync();
         await Refresh();
