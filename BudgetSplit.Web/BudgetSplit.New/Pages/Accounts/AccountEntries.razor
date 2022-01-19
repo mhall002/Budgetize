@@ -10,13 +10,13 @@
 
 <ImportControl ImportCompleted="Import" Account="Account" ImportDefinition="Account.ImportDefinition"/>
 }
-<EntryTable @ref="Table" Filter="@(q => q.Where(t => t.AccountId == Id))" ShowAccount="false" />
+<NewEntryTable @ref="Table" Filter="@(q => q.Where(t => t.AccountId == Id))" ShowAccount="false" />
 
 @code {
     [Parameter]
     public int Id { get; set; }
 
-    EntryTable Table { get; set; }
+    NewEntryTable Table { get; set; }
 
     public Account Account { get; set; }
 

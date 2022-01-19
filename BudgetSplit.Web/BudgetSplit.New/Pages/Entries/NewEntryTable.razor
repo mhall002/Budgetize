@@ -9,12 +9,35 @@
 @inherits OwningComponentBase<ApplicationDbContext>
 @inject ISnackbar _snackbar;
 
+@*<RadzenCard Style="width: fit-content; min-width: 200px;">*@
+
+<RadzenMenu>
+    <RadzenMenuItem Text="Edit Selected" Icon="home">
+        <RadzenButton Click=Delete Icon="delete" Text="Default" />
+        <RadzenMenuItem Text="Delete" Icon="delete"  Click="Delete"></RadzenMenuItem>
+        <RadzenMenuItem Text="Menu" Path="menu" Icon="line_weight"></RadzenMenuItem>
+        <RadzenMenuItem Text="FileInput" Path="fileinput" Icon="attach_file"></RadzenMenuItem>
+        <RadzenMenuItem Text="Dialog" Path="dialog" Icon="perm_media"></RadzenMenuItem>
+        <RadzenMenuItem Text="Notification" Path="notification" Icon="announcement"></RadzenMenuItem>
+    </RadzenMenuItem>
+    <RadzenMenuItem Text="Inputs" Icon="payment">
+        <RadzenMenuItem Text="CheckBox" Path="checkbox" Icon="check_circle"></RadzenMenuItem>
+        <RadzenMenuItem Text="TextBox" Path="textbox" Icon="input"></RadzenMenuItem>
+        <RadzenMenuItem Text="TextArea" Path="textarea" Icon="description"></RadzenMenuItem>
+        <RadzenMenuItem Text="Password" Path="password" Icon="payment"></RadzenMenuItem>
+        <RadzenMenuItem Text="Numeric" Path="numeric" Icon="aspect_ratio"></RadzenMenuItem>
+        <RadzenMenuItem Text="DatePicker" Path="datepicker" Icon="date_range"></RadzenMenuItem>
+    </RadzenMenuItem>
+</RadzenMenu>
+
+@*</RadzenCard>*@
+
 
 <RadzenDataGrid @ref="ordersGrid" AllowFiltering="true" AllowPaging="true" PageSize="20" AllowSorting="true" EditMode="DataGridEditMode.Multiple"
                 Data="@Elements" TItem="Transaction" RowUpdate="@OnUpdateRow" RowCreate="@OnCreateRow"
                 SelectionMode="DataGridSelectionMode.Multiple" @bind-Value=SelectedTransactions>
         <Columns>
-            <RadzenDataGridColumn TItem="Transaction" Width="40px" Sortable="false" Filterable="false">
+            <RadzenDataGridColumn TItem="Transaction" Width="50px" Sortable="false" Filterable="false">
                 <HeaderTemplate>
                     <RadzenCheckBox TriState="false" TValue="bool" Value="@(Elements.Count == SelectedTransactions.Count)"
                     Change="@(args => SelectedTransactions = (SelectedTransactions.Count == Elements.Count) ? new List<Transaction>() : new List<Transaction>(Elements))"                 
@@ -34,7 +57,7 @@
             </RadzenDataGridColumn>
         }
 
-            <RadzenDataGridColumn TItem="Transaction" Property="TransactionDate" Title="Date" Width="280px" >
+            <RadzenDataGridColumn TItem="Transaction" Property="TransactionDate" Title="Date" Width="280px" FormatString="{0:d}" >
                 <EditTemplate Context="order">
                     <RadzenDatePicker @bind-Value="order.TransactionDate" Style="width:100%" />
                 </EditTemplate>
@@ -60,7 +83,7 @@
                     <RadzenRequiredValidator Text="ShipName is required" Component="ShipName" Popup="true" />
                 </EditTemplate>
             </RadzenDataGridColumn>
-            <RadzenDataGridColumn TItem="Transaction" Property="Amount" Title="Amount">
+            <RadzenDataGridColumn TItem="Transaction" Property="Amount" Title="Amount" FormatString="{0:C}">
                 <EditTemplate Context="order">
                     <RadzenNumeric @bind-Value="order.Amount" Style="width:100%; display: block" />
                 </EditTemplate>
@@ -171,7 +194,6 @@
 
     RadzenDataGrid<Transaction> ordersGrid;
 
-    private MudTable<Transaction> Table { get; set; }
     private List<Transaction> Elements = new List<Transaction>();
     private bool _loading = true;
     private ApplicationDbContext _context => Service;
@@ -268,9 +290,8 @@
         StateHasChanged();
     }
 
-    protected async Task Delete()
+    protected async Task Delete(MouseEventArgs args)
     {
-        Table.SetEditingItem(null);
         _context.Transactions.RemoveRange(SelectedTransactions);
         await _context.SaveChangesAsync();
         _snackbar.Add($"Deleted {SelectedTransactions.Count} entries", Severity.Error);
@@ -279,23 +300,19 @@
         Elements = new List<Transaction>();
         StateHasChanged();
         Elements = oldElements;
-        SelectedTransactions.Clear();
+        SelectedTransactions = new List<Transaction>();
         StateHasChanged();
         await Refresh();
     }
 
     protected async Task SelectAll()
     {
-        Table.SelectedItems.Clear();
-        foreach (var item in Elements)
-        {
-            Table.SelectedItems.Add(item);
-        }
+        SelectedTransactions = new List<Transaction>(Elements);
     }
 
     protected async Task DeselectAll()
     {
-        Table.SelectedItems.Clear();
+        SelectedTransactions = new List<Transaction>();
     }
 
     public void Dispose()
@@ -310,6 +327,8 @@
 
     void OnUpdateRow(Transaction order)
     {
+        ordersGrid.View
+
         if (order == orderToInsert)
         {
             orderToInsert = null;
